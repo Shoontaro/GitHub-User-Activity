@@ -26,6 +26,18 @@ internal class Program
         rootCommand.Parse(args).Invoke();
     }
 
+    private static readonly HttpClient client = new HttpClient();
+
+    private void gitApi()
+    {
+        client.DefaultRequestHeaders.Accept.Clear();
+        client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
+        client.DefaultRequestHeaders.Add("User-Agent", "CSharp-Console-GitHub-App");
+
+
+
+    }
+
     public void Commands()
     {
         while (true) {
