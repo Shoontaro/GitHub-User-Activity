@@ -1,4 +1,5 @@
-﻿using Octokit;
+﻿using GitHub_User_Activity;
+using Octokit;
 using Spectre.Console;
 using Spectre.Console.Cli;
 using System.CommandLine;
@@ -8,84 +9,70 @@ using System.Net.Http.Headers;
 
 internal class Program
 {
-    private static void Main(string[] args)
+    private static readonly HttpClient client = new HttpClient();
+
+    private static async Task Main(string[] args)
     {
         var rootCommand = new RootCommand("");
 
         Argument<string> name = new("name")
         {
-            DefaultValueFactory = (_) => "Shoontaro",
+            DefaultValueFactory = (_) => "Shoontaro"
         };
-
+        
         rootCommand.Add(name);
 
-        rootCommand.SetAction(parseResult =>
+        rootCommand.SetAction(async parseResult =>
         {
+            Validator.NameValidator(parseResult.GetValue(name));
 
-            string username = parseResult.GetValue(name);
+            string username = parseResult.GetValue(name)??"Shoontaro";
 
             Console.WriteLine($"Name: {parseResult.GetValue(name)}");
-            try
-            {
-                Console.WriteLine($"Запрос активности для пользователя: {username}...");
-                GetUserActivityAsync(username);
-            }
-            catch (ApiException ex)
-            {
-                Console.WriteLine($"Ошибка API GitHub: {ex.Message}");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Произошла ошибка: {ex.Message}");
-            }
+            await gitApi(username);
+
         });
 
         rootCommand.Parse(args).Invoke();
     }
 
-    private static readonly GitHubClient client = new GitHubClient( new Octokit.ProductHeaderValue("GithubUserActivity"));
-    
-
-    static async Task GetUserActivityAsync(string username)
+    private static async Task gitApi(string username)
     {
-        // client.Credentials = new Credentials("ваш_personal_access_token");
-        // Получаем список публичных событий пользователя (ограничено последними 300 событиями)
-        var events = await client.Activity.Events.GetAllUserPerformedPublic(username);
+        var url = $"https://api.github.com/users/{Uri.EscapeDataString(username)}/events";
 
-        if (events.Count == 0)
+        client.DefaultRequestHeaders.Accept.Clear();
+        client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
+        client.DefaultRequestHeaders.Add("User-Agent", "GitHub_User_Activity");
+
+        try
         {
-            Console.WriteLine("Публичная активность за последние 90 дней не найдена.");
-            return;
-        }
-
-        Console.WriteLine($"\nНайдено записей об активности: {events.Count}");
-
-        // Извлекаем самое последнее событие
-        var lastEvent = events[0];
-        Console.WriteLine($"\nПоследнее действие:");
-        Console.WriteLine($"- Тип события: {lastEvent.Type}");
-        Console.WriteLine($"- Репозиторий: {lastEvent.Repo.Name}");
-        Console.WriteLine($"- Дата и время: {lastEvent.CreatedAt.ToLocalTime()}");
-    }
-
-    //private void gitApi()
-    //{
-    //    client.DefaultRequestHeaders.Accept.Clear();
-    //    client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
-    //    client.DefaultRequestHeaders.Add("User-Agent", "CSharp-Console-GitHub-App");
-    //}
-
-    public void Commands()
-    {
-        while (true) {
-            string command = Console.ReadLine()?? "";
-
-            Argument<string> name = new("name")
+            var response = await client.GetAsync(url);
+            if (!response.IsSuccessStatusCode)
             {
-                DefaultValueFactory = (_) => "Shoontaro", //объектный инициализатор
-            };
+                Console.WriteLine($"GitHub API returned {(int)response.StatusCode} {response.ReasonPhrase}.");
+                return;
+            }
+                Console.WriteLine("Ответ от API:");
+                Console.WriteLine(response);
+            
+        }
+        catch (HttpRequestException e)
+        {
+            Console.WriteLine($"Ошибка: {e.Message}");
         }
     }
+
+    //public void Commands()
+    //{
+    //    while (true) {
+    //        string command = Console.ReadLine()?? "";
+
+    //        Argument<string> name = new("name")
+    //        {
+    //            DefaultValueFactory = (_) => "Shoontaro", //объектный инициализатор
+    //        };
+    //    }
+    //}
 }
 
 //public class GreetSettings : CommandSettings
