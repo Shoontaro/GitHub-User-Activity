@@ -10,8 +10,6 @@ using System.Text.Json;
 
 internal class Program
 {
-    private static readonly HttpClient client = new HttpClient();
-
     private static async Task Main(string[] args)
     {
         var rootCommand = new RootCommand("");
@@ -30,61 +28,21 @@ internal class Program
             string username = parseResult.GetValue(name)??"Shoontaro";
 
             Console.WriteLine($"Name: {parseResult.GetValue(name)}");
-            var activity = await gitApi(username);
+            var activity = await API.gitApi(username);
 
             if (activity == null)
             {
                 return;
             }
 
-            DisplayData(activity);
+            API.DisplayData(activity);
 
         });
 
         rootCommand.Parse(args).Invoke();
     }
 
-    private static async Task<string?> gitApi(string username)
-    {
-        var url = $"https://api.github.com/users/{Uri.EscapeDataString(username)}/events";
-
-        client.DefaultRequestHeaders.Accept.Clear();
-        client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
-        client.DefaultRequestHeaders.Add("User-Agent", "GitHub_User_Activity");
-
-        try
-        {
-            var response = await client.GetAsync(url);
-            if (!response.IsSuccessStatusCode)
-            {
-                Console.WriteLine($"GitHub API returned {(int)response.StatusCode} {response.ReasonPhrase}.");
-                return null;
-            }
-                //Console.WriteLine("Ответ от API:");
-                //Console.WriteLine(response);
-
-            var content = await response.Content.ReadAsStringAsync();
-            return content;
-
-        }
-        catch (HttpRequestException e)
-        {
-            Console.WriteLine($"Ошибка: {e.Message}");
-            return null;
-        }
-    }
-
-    private static void DisplayData(string data)
-    {
-        try
-        {
-            using var doc = JsonDocument.Parse(data);
-            var root = doc.RootElement;
-
-
-        } 
-        catch (HttpRequestException e) { Console.WriteLine("Display_error"); }
-    }
+    
 
     //public void Commands()
     //{
