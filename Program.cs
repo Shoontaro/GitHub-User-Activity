@@ -1,5 +1,4 @@
 ﻿using GitHub_User_Activity;
-using Octokit;
 using Spectre.Console;
 using Spectre.Console.Cli;
 using System.CommandLine;
