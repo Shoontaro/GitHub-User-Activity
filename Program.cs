@@ -6,6 +6,8 @@ using System.CommandLine;
 using System.CommandLine.Parsing;
 using System.ComponentModel;
 using System.Net.Http.Headers;
+using System.Net.Http.Json;
+using System.Text.Json;
 
 internal class Program
 {
@@ -29,14 +31,21 @@ internal class Program
             string username = parseResult.GetValue(name)??"Shoontaro";
 
             Console.WriteLine($"Name: {parseResult.GetValue(name)}");
-            await gitApi(username);
+            var activity = await gitApi(username);
+
+            if (activity == null)
+            {
+                return;
+            }
+
+            DisplayData(activity);
 
         });
 
         rootCommand.Parse(args).Invoke();
     }
 
-    private static async Task gitApi(string username)
+    private static async Task<string?> gitApi(string username)
     {
         var url = $"https://api.github.com/users/{Uri.EscapeDataString(username)}/events";
 
@@ -50,16 +59,32 @@ internal class Program
             if (!response.IsSuccessStatusCode)
             {
                 Console.WriteLine($"GitHub API returned {(int)response.StatusCode} {response.ReasonPhrase}.");
-                return;
+                return null;
             }
-                Console.WriteLine("Ответ от API:");
-                Console.WriteLine(response);
-            
+                //Console.WriteLine("Ответ от API:");
+                //Console.WriteLine(response);
+
+            var content = await response.Content.ReadAsStringAsync();
+            return content;
+
         }
         catch (HttpRequestException e)
         {
             Console.WriteLine($"Ошибка: {e.Message}");
+            return null;
         }
+    }
+
+    private static void DisplayData(string data)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(data);
+            var root = doc.RootElement;
+
+
+        } 
+        catch (HttpRequestException e) { Console.WriteLine("Display_error"); }
     }
 
     //public void Commands()
